@@ -1,21 +1,22 @@
 from collections.abc import Iterator
 
 from openai import OpenAI
+
+from mychat.config import Settings
 from .base import LLMProvider
 
 
 class OllamaLLMProvider(LLMProvider):
-    def __init__(self, model: str = 'llama3.2:latest',
-                 base_url: str = "http://localhost:11434/v1",
-                 api_key: str = "ollama"):
-        self.model = model
-        self.client = OpenAI(base_url=base_url, api_key=api_key)
+    def __init__(self, model: str | None = None):
+        self.model = model or Settings().llm_model
+        self.client = OpenAI(base_url=Settings().ollama_host, api_key=Settings().ollama_api_key)
 
 
     def stream(self, messages: list[dict]) -> Iterator[str]:
         response = self.client.chat.completions.create(
             model=self.model,
             messages=messages,
+            temperature=Settings().llm_temperature,
             stream=True
         )
 

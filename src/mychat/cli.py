@@ -1,5 +1,7 @@
 import typer
 from rich.console import Console
+
+from mychat.config import Settings
 from .llm import create_llm_provider
 
 app = typer.Typer(help="Start a chat session with an LLM.")
@@ -8,7 +10,7 @@ console = Console()
 @app.command()
 def chat(
     provider: str = typer.Option(
-        "ollama",
+        None,
         "--provider",
         "-p",
         help="LLM provider: ollama or openai",
@@ -18,16 +20,18 @@ def chat(
         "--model",
         "-m",
         help="Model name",
-    ),
-):
+    )):
+    settings = Settings()
+    selected_provider = provider or settings.llm_provider
+    selected_model = model or (settings.llm_model if selected_provider == "ollama" else settings.openai_model)
     try:
-        llm = create_llm_provider(provider, model)
+        llm = create_llm_provider(provider = selected_provider, model = selected_model)
     except ValueError as error:
         console.print(f"[red]Error:[/red] {error}")
         raise typer.Exit(code=1) from error
 
     console.print("\n[bold green]MyChat AI[/bold green]")
-    console.print(f"[dim]Provider: {provider} | Model: {model or 'default'}[/dim]")
+    console.print(f"[dim]Provider: {selected_provider} | Model: {selected_model}[/dim]")
     console.print("Type 'exit' or 'quit' to exit.\n")
 
     messages = [

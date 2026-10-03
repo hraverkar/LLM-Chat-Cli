@@ -1,12 +1,16 @@
+from mychat.config import Settings
+
 from .base import LLMProvider
 from .ollama import OllamaLLMProvider
 from .openai import OpenAILLMProvider
 
 
-def create_llm_provider(provider_name: str, model: str = None) -> LLMProvider:
-    if provider_name.lower() == "ollama":
-        return OllamaLLMProvider(model=model or 'llama3.2:latest')
-    elif provider_name.lower() == "openai":
-        return OpenAILLMProvider(model=model or 'gpt-4o')
+def create_llm_provider(provider: str | None = None, model: str | None = None) -> LLMProvider:
+    settings = Settings()
+    selected_provider = provider or settings.llm_provider
+    if selected_provider.lower() == "ollama":
+        return OllamaLLMProvider(model=model or settings.llm_model)
+    elif selected_provider.lower() == "openai":
+        return OpenAILLMProvider(model=model or settings.openai_model)
     else:
-        raise ValueError(f"Unknown LLM provider: {provider_name}")
+        raise ValueError(f"Unknown LLM provider: {selected_provider}")
