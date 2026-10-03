@@ -35,7 +35,7 @@ jobs:
             exit 1
           fi
 
-          azure_url="https://dev.azure.com/hraverkar/Sample/_git/LLM-Chat-Cli"
+          azure_url="https://dev.azure.com/hraverkar/Sample/_git/LLM-Chat-Cli.git"
           auth_header="$(printf ':%s' "$AZURE_DEVOPS_PAT" | base64 -w 0)"
           git -c "http.https://dev.azure.com/.extraheader=AUTHORIZATION: basic ${auth_header}" \
             fetch "$azure_url" refs/heads/main:refs/remotes/azure/main
