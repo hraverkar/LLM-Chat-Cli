@@ -1,0 +1,37 @@
+trigger:
+  branches:
+    include:
+      - main
+pool:
+  vmImage: 'ubuntu-latest'
+
+steps:
+  - checkout: self
+    persistCredentials: true
+    fetchDepth: 0
+
+  - script: |
+      set -euo pipefail
+
+      if [ -z "${SYSTEM_ACCESSTOKEN:-}" ]; then
+        echo "System.AccessToken is unavailable. Enable OAuth token access for this pipeline."
+        exit 1
+      fi
+
+      target_url="https://dev.azure.com/hraverkar/Sample/_git/LLM-Chat-Cli"
+      target_head="$(git -c "http.https://dev.azure.com/.extraheader=AUTHORIZATION: bearer ${SYSTEM_ACCESSTOKEN}" \
+        ls-remote "$target_url" refs/heads/main | cut -f1)"
+      source_head="$(git rev-parse HEAD)"
+
+      if [ "$source_head" = "$target_head" ]; then
+        echo "Azure DevOps main already has this commit; skipping push."
+        exit 0
+      fi
+
+      echo "Pushing GitHub commit to Azure DevOps..."
+      git -c "http.https://dev.azure.com/.extraheader=AUTHORIZATION: bearer ${SYSTEM_ACCESSTOKEN}" \
+        push "$target_url" HEAD:refs/heads/main
+
+    displayName: 'Sync GitHub to Azure DevOps'
+    env:
+      SYSTEM_ACCESSTOKEN: $(System.AccessToken)

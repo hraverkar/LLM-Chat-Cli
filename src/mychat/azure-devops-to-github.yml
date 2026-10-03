@@ -1,0 +1,38 @@
+trigger:
+  branches:
+    include:
+      - main
+pool:
+  vmImage: 'ubuntu-latest'
+
+steps:
+  - checkout: self
+    persistCredentials: true
+    fetchDepth: 0
+
+  - script: |
+      set -euo pipefail
+
+      if [ -z "${GITHUB_TOKEN:-}" ]; then
+        echo "GITHUB_TOKEN is not configured as a secret pipeline variable."
+        exit 1
+      fi
+
+      auth_header="$(printf 'x-access-token:%s' "$GITHUB_TOKEN" | base64 -w 0)"
+      target_url="https://github.com/hraverkar/LLM-Chat-Cli.git"
+      target_head="$(git -c "http.https://github.com/.extraheader=AUTHORIZATION: basic ${auth_header}" \
+        ls-remote "$target_url" refs/heads/main | cut -f1)"
+      source_head="$(git rev-parse HEAD)"
+
+      if [ "$source_head" = "$target_head" ]; then
+        echo "GitHub main already has this commit; skipping push."
+        exit 0
+      fi
+
+      echo "Pushing Azure DevOps commit to GitHub..."
+      git -c "http.https://github.com/.extraheader=AUTHORIZATION: basic ${auth_header}" \
+        push "$target_url" HEAD:refs/heads/main
+
+    displayName: 'Sync Azure DevOps to GitHub'
+    env:
+      GITHUB_TOKEN: $(GITHUB_TOKEN)
