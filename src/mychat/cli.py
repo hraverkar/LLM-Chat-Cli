@@ -3,10 +3,20 @@ from rich.console import Console
 from rich.markdown import Markdown
 from .llm import OllamaLLM
 
-app = typer.Typer()
+app = typer.Typer(
+    invoke_without_command=True,
+    no_args_is_help=False,
+)
 console = Console()
 
-@app.command()
+@app.callback()
+def main():
+    """
+    A simple command-line chat application using the Ollama LLM.
+    
+    """
+    chat()
+
 def chat():
     """
     Start a chat session with the Ollama LLM.
@@ -33,12 +43,12 @@ def chat():
         full_response = ""
         
         try:
-            response_steam = llm.chat(messages)
+            response_stream = llm.stream(messages)
             console.print(" " * 30, end="\r")  # Clear the "Thinking..." line
 
             console.print("[bold yellow]Ollama:[/bold yellow] ", end="")
 
-            for chunk in response_steam:
+            for chunk in response_stream:
                 full_response += chunk
                 console.print(chunk, end="", markup=True)
         except Exception as e:

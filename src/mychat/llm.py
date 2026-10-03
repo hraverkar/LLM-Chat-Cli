@@ -1,3 +1,4 @@
+from typing import Iterator
 from openai import OpenAI
 
 class OllamaLLM:
@@ -9,7 +10,14 @@ class OllamaLLM:
             api_key="ollama"
         )
 
-    def chat(self, messages: list[dict]) :
+    def chat(self, messages: list[dict]) -> str:
+        response = self.client.chat.completions.create(
+            model=self.model,
+            messages=messages,
+        )
+        return response.choices[0].message.content or ""
+
+    def stream(self, messages: list[dict]) -> Iterator[str]:
         response = self.client.chat.completions.create(
             model=self.model,
             messages=messages,
