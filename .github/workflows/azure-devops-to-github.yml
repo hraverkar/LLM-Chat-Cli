@@ -1,0 +1,51 @@
+name: Azure DevOps to GitHub Sync
+
+on:
+  repository_dispatch:
+    types:
+      - azure_devops_sync
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: azure-devops-to-github-main
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    name: Sync Azure DevOps main to GitHub main
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out GitHub repository
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Sync Azure DevOps main
+        env:
+          AZURE_DEVOPS_PAT: ${{ secrets.AZURE_DEVOPS_PAT }}
+        run: |
+          set -euo pipefail
+
+          if [ -z "${AZURE_DEVOPS_PAT:-}" ]; then
+            echo "AZURE_DEVOPS_PAT is not configured as a GitHub Actions secret."
+            exit 1
+          fi
+
+          azure_url="https://dev.azure.com/hraverkar/Sample/_git/LLM-Chat-Cli"
+          auth_header="$(printf ':%s' "$AZURE_DEVOPS_PAT" | base64 -w 0)"
+          git -c "http.https://dev.azure.com/.extraheader=AUTHORIZATION: basic ${auth_header}" \
+            fetch "$azure_url" refs/heads/main:refs/remotes/azure/main
+
+          github_head="$(git rev-parse refs/remotes/origin/main)"
+          azure_head="$(git rev-parse refs/remotes/azure/main)"
+
+          if [ "$github_head" = "$azure_head" ]; then
+            echo "GitHub main already has the Azure DevOps commit; skipping push."
+            exit 0
+          fi
+
+          git push origin refs/remotes/azure/main:refs/heads/main
