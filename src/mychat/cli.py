@@ -1,61 +1,60 @@
 import typer
 from rich.console import Console
-from rich.markdown import Markdown
-from .llm import OllamaLLM
+from .llm import create_llm_provider
 
-app = typer.Typer(
-    invoke_without_command=True,
-    no_args_is_help=False,
-)
+app = typer.Typer(help="Start a chat session with an LLM.")
 console = Console()
 
-@app.callback()
-def main():
-    """
-    A simple command-line chat application using the Ollama LLM.
-    
-    """
-    chat()
+@app.command()
+def chat(
+    provider: str = typer.Option(
+        "ollama",
+        "--provider",
+        "-p",
+        help="LLM provider: ollama or openai",
+    ),
+    model: str | None = typer.Option(
+        None,
+        "--model",
+        "-m",
+        help="Model name",
+    ),
+):
+    try:
+        llm = create_llm_provider(provider, model)
+    except ValueError as error:
+        console.print(f"[red]Error:[/red] {error}")
+        raise typer.Exit(code=1) from error
 
-def chat():
-    """
-    Start a chat session with the Ollama LLM.
-    """
-    llm = OllamaLLM()
+    console.print("\n[bold green]MyChat AI[/bold green]")
+    console.print(f"[dim]Provider: {provider} | Model: {model or 'default'}[/dim]")
+    console.print("Type 'exit' or 'quit' to exit.\n")
 
-    console.print("[bold green]Welcome to the Ollama Chat! Type 'exit' to quit.[/bold green]")
-    
     messages = [
-        {"role": "system", "content": "You are a helpful assistant."}
+        {"role": "system", "content": "You are a helpful AI assistant."}
     ]
-
-    console.print("[bold blue]You:[/bold blue] Hello! How can I assist you today?")
-    console.print("[bold yellow]Ollama:[/bold yellow] Hello! I'm here to help. What would you like to talk about? \n")
 
     while True:
         user_input = console.input("[bold blue]You:[/bold blue] ")
-        if user_input.lower() in ["exit", "quit", "bye", "cls", "clear"]:
-            console.print("[bold red]Exiting chat...[/bold red]")
+        if user_input.lower() in ["exit", "quit", "cls", "clear"]:
+            console.print("\nGoodbye!")
             break
-        
+
         messages.append({"role": "user", "content": user_input})
-        console.print("[bold yellow]🤔 Thinking...:[/bold yellow] ", end="\r")
         full_response = ""
-        
+
+        console.print("\n[bold green]AI:[/bold green] ", end="")
         try:
-            response_stream = llm.stream(messages)
-            console.print(" " * 30, end="\r")  # Clear the "Thinking..." line
-
-            console.print("[bold yellow]Ollama:[/bold yellow] ", end="")
-
-            for chunk in response_stream:
-                full_response += chunk
-                console.print(chunk, end="", markup=True)
-        except Exception as e:
-            console.print(f"[bold red]Error:[/bold red] {e}")
+            for token in llm.stream(messages):
+                print(token, end="", flush=True)
+                full_response += token
+        except Exception as error:
+            console.print(f"\n[red]Error:[/red] {error}")
             continue
-        console.print() 
-        
-        messages.append({"role": "assistant", "content": full_response})  # New line after the response
+
+        print()
+        messages.append({"role": "assistant", "content": full_response})
+
+
 if __name__ == "__main__":
     app()
